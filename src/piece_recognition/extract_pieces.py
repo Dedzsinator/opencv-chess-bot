@@ -18,11 +18,11 @@ import cv2
 import pyautogui as pg
 
 # constants (modify if needed)
-BOARD_SIZE = 400
+BOARD_SIZE = 746
 DARK_SQUARE_THRESHOLD = 150
 CELL_SIZE = int(BOARD_SIZE / 8)
-BOARD_TOP_COORD = 141
-BOARD_LEFT_COORD = 5
+BOARD_TOP_COORD = 258
+BOARD_LEFT_COORD = 16
 
 # map pieces
 piece_names = {
@@ -58,18 +58,22 @@ piece_code = 0
 
 # loop over board rows
 for row in range(8):
+    #print coords
+    print(x, y)
     # loop over board columns
     for col in range(8):
         # pick up certain rows
         if row in [0, 1, 5, 6]:
             # match only light squares
-            if screenshot_grayscale[y][x] > DARK_SQUARE_THRESHOLD:
+            if screenshot_grayscale[y][x] < 142:
                 # skip empty cells
                 if row == 1 and col < 4: continue
                 if row == 5 and col < 4: continue
                 
                 # crop piece image
                 piece_image = screenshot[y:y + CELL_SIZE, x: x + CELL_SIZE]
+                
+                #print coords
                 
                 # uncomment to display extracted images
                 cv2.imshow('scr', piece_image)

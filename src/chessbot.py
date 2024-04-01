@@ -10,6 +10,7 @@
 #####################################
 
 # packages
+import random
 import sys
 import cv2
 import numpy as np
@@ -19,12 +20,12 @@ import chess.engine
 import time
 
 # constants (modify if needed)
-BOARD_SIZE = 400
+BOARD_SIZE = 746
 CELL_SIZE = int(BOARD_SIZE / 8)
-BOARD_TOP_COORD = 141
-BOARD_LEFT_COORD = 5
+BOARD_TOP_COORD = 258
+BOARD_LEFT_COORD = 16
 CONFIDENCE = 0.8
-DETECTION_NOICE_THRESHOLD = 8
+DETECTION_NOICE_THRESHOLD = 12
 PIECES_PATH = './piece_recognition/pieces/'
 
 # players
@@ -71,6 +72,25 @@ piece_names = {
     'white_rook': 'R',
     'white_bishop': 'B'
 }
+
+def apply_move_to_fen(fen, start_pos, end_pos):
+    board_rows = fen.split()[0].split('/')
+    start_rank = 8 - int(start_pos[1])
+    start_file = ord(start_pos[0]) - ord('a')
+    end_rank = 8 - int(end_pos[1])
+    end_file = ord(end_pos[0]) - ord('a')
+    
+    piece = board_rows[start_rank][start_file]
+    board_rows[start_rank] = board_rows[start_rank][:start_file] + '.' + board_rows[start_rank][start_file + 1:]
+    board_rows[end_rank] = board_rows[end_rank][:end_file] + piece + board_rows[end_rank][end_file + 1:]
+
+    new_board = '/'.join(board_rows)
+    fen_parts = fen.split()
+    fen_parts[0] = new_board
+    fen_parts[1] = 'w' if fen_parts[1] == 'b' else 'b'
+    fen = ' '.join(fen_parts)
+    
+    return fen
 
 # locate piece on image
 def locate_piece(screenshot, piece_location):
@@ -132,7 +152,7 @@ def recognize_position():
             
             # detect piece
             piece_locations[piece].append(location)
-            print('detecting:', piece, location)
+            #!print('detecting:', piece, location)
             
     # return piece locations 
     return screenshot, piece_locations
@@ -203,19 +223,20 @@ def search(fen):
     print(board)
 
     # load Stockfish engine
-    engine = chess.engine.SimpleEngine.popen_uci("./Stockfish/stockfish")
+    engine = chess.engine.SimpleEngine.popen_uci("./Stockfish/stockfish-windows-x86-64-avx2.exe")
     
     # load BBC engine
     #engine = chess.engine.SimpleEngine.popen_uci("./bbc/bbc")
     
     # get best move
-    best_move = str(engine.play(board, chess.engine.Limit(time=0.1)).move)
+    randTime = random.uniform(0.1, 2)
+    best_move = str(engine.play(board, chess.engine.Limit(time=randTime)).move)
     
     # close engine
     engine.quit()
 
     # search for the best move
-    return best_move
+    return best_move, randTime
 
 
 ################################    
@@ -251,39 +272,42 @@ for row in range(8):
 #
 ################################
 
-while True:
-    try:
-        # locate pieces
-        screenshot, piece_locations = recognize_position()
-
-        # convert piece image coordinates to FEN string
-        fen = locations_to_fen(piece_locations)
-
-        best_move = search(fen)
-        print('Best move:', best_move)
-
-        # extract source and destination square coordinates
-        from_sq = square_to_coords[get_square.index(best_move[0] + best_move[1])]
-        to_sq = square_to_coords[get_square.index(best_move[2] + best_move[3])]
-
-        # make move on board
-        pg.moveTo(from_sq)
-        pg.click()
-        pg.moveTo(to_sq)
-        pg.click()
-        
-        # wait for 3 seconds
-        time.sleep(3)
+if __name__ == '__main__':
+    #for the first start scan the image and get the FEN
+    #screenshot, piece_locations = recognize_position()
+    #fen = locations_to_fen(piece_locations)
     
-    except: sys.exit(0)
+    #after that only search for the black pieces because we know the white pieces are on the board based on the fen
 
+    while True:
+        try:
+            # locate pieces
+            screenshot, piece_locations = recognize_position()
 
+            # convert piece image coordinates to FEN string
+            fen = locations_to_fen(piece_locations)
 
+            best_move, randTime = search(fen)
+            
+            print('Best move:', best_move)
+            print('Time:', randTime)
 
+            # extract source and destination square coordinates
+            from_sq = square_to_coords[get_square.index(best_move[0] + best_move[1])]
+            to_sq = square_to_coords[get_square.index(best_move[2] + best_move[3])]
 
+            #fen = apply_move_to_fen(fen, best_move[0] + best_move[1], best_move[2] + best_move[3])
 
+            print(fen)
 
-
-
-
-
+            # make move on board
+            pg.moveTo(from_sq)
+            pg.click()
+            pg.moveTo(to_sq)
+            pg.click()
+            
+            # wait for 3 seconds
+            # time.sleep(3)
+        except Exception as e:
+            print('Error:', e)
+            sys.exit(0)
